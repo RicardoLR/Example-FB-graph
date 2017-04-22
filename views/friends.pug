@@ -1,0 +1,35 @@
+doctype html 
+html(lang='es') 
+	head 
+		meta(charset='utf-8') 
+		title FB graph para Yamblet 
+		link(rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css")
+
+		script(rel="stylesheet" type="text/css" href="https://ajax.googleapis.com/ajax/libs/jquery/3.2.0/jquery.min.js")
+		script(rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js")
+
+	body
+		.container
+			nav.navbar.navbar-inverse.navbar-embossed
+				.container-fluid
+					.navbar-header
+						a.navbar-brand(href="#") Yamblet
+					.collapse.navbar-collapse
+						ul.nav.navbar-nav.navbar-right
+							li
+								a(href="/friends") Buscar mis amigos
+							li
+								a(href="/auth/close") Cerrar sesión
+
+
+			section
+				h1 These are your friends in Yamblet
+				p Cuentanos tus ideas y las haremos realidad.
+				
+				.row
+					for user in users
+						.col.xs-6.text-center
+							img(src="http://graph.facebook.com/"+user.uid+"/picture?height=200")
+							h4=user.name							
+
+
