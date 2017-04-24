@@ -29,7 +29,13 @@ html(lang='es')
 				.row
 					.col.xs-6(style="float:none;")
 						form(action="/idea" method="POST")
+
+							div(class="[ form-group ]")
+								if activaCheck
+									input(type="checkbox" placeholder="publicar cada 5 min" name="checkCadaMin" checked)
+								else 
+									input(type="checkbox" placeholder="publicar cada 5 min" name="checkCadaMin")
+								label(for="fancy-checkbox-primary" class="btn btn-default active") Publicar cada 5 min.
+
 							input(type="text" class="form-control" placeholder="¿Que te parecio el equipo Yamblet?" name="ideaCliente")
 							input(type="submit" value="Compartir")
-
-

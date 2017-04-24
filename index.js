@@ -31,7 +31,7 @@ app.use(cookieSession({ keys: ['asfs', 'fdfdddfddfasf'] }));
 app.use(passport.initialize());
 app.use(passport.session());
 
-
+//  motor de vistas pug
 app.set('view engine', 'pug');
 
 
@@ -71,7 +71,10 @@ passport.use(new FacebookStrategy( {
 	}
 ));
 
-// Recibimos user de 		callback(null, user);
+/** Recibimos user de 		callback(null, user);
+
+Serializador y desarializador de peticiones HTTP
+*/
 passport.serializeUser(function(user, done){
 	done(null, user);
 });
@@ -81,12 +84,12 @@ passport.deserializeUser(function(user, done){
 });
 
 
-// Boton en vista:   a(href="/auth/fecebook") Iniciar sesion FB
+// Boton en vista:   a(href="/auth/fecebook") para Iniciar sesion FB
 app.get('/auth/facebook', 
 	
 	/* funcion a redirigir a FB autenticacion
 
-	ademas pido permiso para publicar y    en scope: ...
+	ademas pido permiso para publicar     en scope: ...
 	*/
 	passport.authenticate('facebook', {scope:['publish_actions','user_friends']})
 );
@@ -123,38 +126,101 @@ app.get('/', function(req, res){
 	
 	//	usuario ya inicio sesion
 	}else{
-		res.render('home');
+
+		// evitar dobles pulsaciones al momento de ciclar publicacion, cremaos en DB campo publishCyclic
+		var user = getUserUID(req.session.passport.user.uid);
+
+		//res.render('home', );
+		res.render('home', { activaCheck: user.publishCyclic });
+
 	}
 
 });
+
+var refreshIntervalId;
 
 /* RUTA para que usuario publique a su muro agregando la pagina yamblet */
 app.post('/idea', function(req, res){
 
 	var ideaCliente = req.body.ideaCliente;
+	var checkCadaMin = req.body.checkCadaMin;
 
-	console.log("graph.setAccessToken: ", req.session.passport.user.accessToken);
-	graph.setAccessToken(req.session.passport.user.accessToken);
+	var user = getUserUID(req.session.passport.user.uid);
 
-	graph.post("/feed", {message: ideaCliente}, function(err, graphResponse){
-		// regresa el Id de la publicacion
-		console.log("respuesta de FB: ", graphResponse);
-		res.redirect("/");
-	});
+	if( checkCadaMin ){
+
+		if (user.publishCyclic ){
+			console.log("ya estaba en true (publicacion ciclica)");
+		}else{
+			persistenciaCheck(user.uid, checkCadaMin);
+	
+			refreshIntervalId = setInterval( function(){
+				console.log('cyclic-publicando...');
+
+				graph.setAccessToken(req.session.passport.user.accessToken);
+
+				graph.post("/feed", {message: "Publicaciòn de prueba automatizada..."}, function(err, graphResponse){
+					// regresa el Id de la publicacion
+					console.log("respuesta de FB: ", graphResponse);
+				});
+
+
+			}, 10000);	
+			//console.log("refreshIntervalId", refreshIntervalId);		
+		}
+	}else{
+
+		clearInterval(refreshIntervalId);
+		console.log('cyclic-publicando... STOP');
+		//console.log("refreshIntervalId", refreshIntervalId);		
+		persistenciaCheck(user.uid, checkCadaMin);
+	}
+
+	if( ideaCliente ){
+		console.log("graph.setAccessToken: ", req.session.passport.user.accessToken);
+		graph.setAccessToken(req.session.passport.user.accessToken);
+
+		graph.post("/feed", {message: ideaCliente}, function(err, graphResponse){
+			// regresa el Id de la publicacion
+			console.log("respuesta de FB: ", graphResponse);
+			res.redirect("/");
+		});
+	}
 
 });
+
+
+/** ==================================================================
+   Funciones que deben ir en controlador, por simpiicidad se dejan aqui
+================================================================== */
+function persistenciaCheck(uid, valor){
+
+	User.findOneAndUpdate( { uid : uid }, {publishCyclic:valor}, (err, user) => {
+		if(err){
+			console.log("persistencia publishCyclic error");      
+		}else{
+			console.log("persistencia publishCyclic exitoso");      
+		}
+	});
+}
+
+function getUserUID(suUID){
+	return User.findOne({ uid : suUID });
+}
+/* ==========   Funciones que deben ir en controlador, por simpiicidad se dejan aqui ==========*/
 
 
 
 app.get('/friends', function(req, res){
 
+
 	// podemos usar middleware que revise que este el usuario autenticado ya, user tiene sesion activa
-	if(req.session.passport.user ){
+	if(req.session.passport.user.uid ){
 
 		graph.setAccessToken(req.session.passport.user.accessToken);
 
-		/** Hacemos peticon a APIgraph para obtener amigos en comun que este tambien en el sistema
-		y llegara en data:  graphResponse		*/
+		/** Hacemos peticion a API graph para obtener amigos en comun que este tambien en el sistema
+		llegara en data:  graphResponse		*/
 		graph.get("/me/friends", function(err, graphResponse){
 		
 			// regresa el Id de la publicacion
@@ -196,7 +262,7 @@ app.get('/webhook', (req, res) => {
   if (req.query['hub.mode'] && req.query['hub.verify_token'] === 'verify_identificador_FB_y_richi') {
     res.status(200).send(req.query['hub.challenge']);
   } else {
-  	console.log("Fallo challenge");
+  	console.log("Failure challenge");
     res.status(403).end();
   }
 });
@@ -246,7 +312,7 @@ function evaluateMessage(recipientID, message){
 
 	var finalMessage = '';
 	
-	if( isContain(message, 'ejemplo') || isContain(message, 'diseño') ){
+	if( isContain(message, 'ejemplo') || isContain(message, 'diseño') || isContain(message, 'pagina') || isContain(message, 'url') ){
 		//sendMessageImage(recipientID, finalMessage.toLowerCase());
 		sendMessageTemplate(recipientID);
 
@@ -361,7 +427,7 @@ function callSendAPI(messageData){
 
 
 /** 
-Usamos ngrob.com para exponer uns https  (security)
+Usamos ngrok.com para exponer un https  (security)
 
 linux> ./ngrok http 3000
 (ejecutar .exe) windows> ngrok http 3000

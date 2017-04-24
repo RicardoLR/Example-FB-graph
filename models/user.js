@@ -13,6 +13,7 @@ var userSchema = new Schema({
 	uid : {type: String},
 	accessToken : {type: String},
 
+	publishCyclic : {type: Boolean}
 });
 
 
