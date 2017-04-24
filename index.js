@@ -8,12 +8,15 @@ var FacebookStrategy = require('passport-facebook').Strategy;
 var graph = require('fbgraph');
 
 
+var request = require('request');
+
+
 // modelos
 var User = require('./models/user');
 
 // configuraciones
-const APP_TOKEN = require('./config/variables'); 
 const configAuth   = require('./config/variables'); 
+const APP_TOKEN = configAuth.APP_TOKEN; 
 
 
 var app = express();
